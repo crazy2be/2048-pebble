@@ -1,4 +1,4 @@
-#include "2048-board.h"
+#include "board.h"
 
 #define BOARD_SIZE 4
 

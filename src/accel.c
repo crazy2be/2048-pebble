@@ -1,5 +1,5 @@
 #include "accel.h"
-#include "2048-board.h"
+#include "board.h"
 
 static const GPathInfo TRIANGLE_PATH_INFO = {
   .num_points = 3,

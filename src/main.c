@@ -1,4 +1,5 @@
-#include "2048-board.h"
+#include "board.h"
+// #include "accel.h"
 #include "button.h"
 
 static Window *window;
