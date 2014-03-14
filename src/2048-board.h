@@ -1,4 +1,3 @@
-#include <pebble.h>
 #include "shared.h"
 
 void board_init(void);
