@@ -1,5 +1,3 @@
-#include <pebble.h>
-
 #include "2048-board.h"
 
 #define BOARD_SIZE 4

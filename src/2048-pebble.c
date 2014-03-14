@@ -1,9 +1,4 @@
-#include <pebble.h>
-
 #include "2048-board.h"
-
-extern void board_init();
-extern void board_draw(GContext* ctx);
 
 static Window *window;
 static Layer *game_layer;
@@ -15,6 +10,7 @@ static const GPathInfo TRIANGLE_PATH_INFO = {
 
 static GPath *s_triangle_path = NULL;
 static bool s_select_down = false;
+static Direction s_current_direction;
 
 static void select_down_handler(ClickRecognizerRef recognizer, void *context) {
   s_select_down = true;
@@ -22,6 +18,7 @@ static void select_down_handler(ClickRecognizerRef recognizer, void *context) {
 
 static void select_up_handler(ClickRecognizerRef recognizer, void *context) {
   s_select_down = false;
+  board_move(s_current_direction);
 }
 
 static void click_config_provider(void *context) {
@@ -73,6 +70,7 @@ static void game_layer_update_callback(Layer *me, GContext *ctx) {
   graphics_fill_circle(ctx, GPoint(accel.x/10 + 144/2, -accel.y/10 + 144/2), (accel.z + 4000)/200);
 
   Direction dir = read_accel_direction(accel);
+  s_current_direction = dir;
   transform_path(s_triangle_path, dir);
   // Draw filled doesn't also draw the outline...
   gpath_draw_outline(ctx, s_triangle_path);
