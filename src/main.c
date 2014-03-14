@@ -45,6 +45,7 @@ static void init(void) {
   app_timer_register(100, timer_callback, NULL);
 
   window = window_create();
+  window_set_fullscreen(window, true);
   window_set_click_config_provider(window, click_config_provider);
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,

@@ -21,6 +21,7 @@ static bool s_lost_game = false;
 
 static void tile_draw(GContext *ctx, int xs, int ys, int w, int h, int val) {
   if (val == 0) return;
+
   graphics_draw_rect(ctx, (GRect) {
     .origin = GPoint(xs + TILE_SIZE/2 - val, ys + TILE_SIZE/2 - val),
     .size = GSize(val*2, val*2),
@@ -28,14 +29,43 @@ static void tile_draw(GContext *ctx, int xs, int ys, int w, int h, int val) {
 }
 
 void board_draw(GContext *ctx) {
+  static char score_buf[100];
+  snprintf(score_buf, 100, "Score: %d", s_total_score);
+
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx,
+                     score_buf,
+                     fonts_get_system_font(FONT_KEY_FONT_FALLBACK),
+                     GRect(0, 0, 144, 20),
+                     GTextOverflowModeWordWrap,
+                     GTextAlignmentCenter,
+                     NULL);
+
   for (int i = 0; i < BOARD_SIZE; i++) {
     for (int j = 0; j < BOARD_SIZE; j++) {
       int x = i*TILE_SIZE + BORDER_SIZE;
-      int y = j*TILE_SIZE + BORDER_SIZE;
+      int y = j*TILE_SIZE + BORDER_SIZE + 20;
       Cell cell = Cell(i, j);
       int val = grid_cell_value(cell);
       tile_draw(ctx, x, y, TILE_SIZE, TILE_SIZE, val);
     }
+  }
+
+  if (s_won_game || s_lost_game) {
+    for (int xp = 0; xp < 144; xp++) {
+      for (int yp = 0; yp < 168; yp++) {
+        if ((xp + yp) % 2 == 0) {
+          graphics_draw_pixel(ctx, GPoint(xp, yp));
+        }
+      }
+    }
+    graphics_draw_text(ctx,
+                       s_won_game ? "Win!" : "Lose :(",
+                       fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
+                       GRect(0, (168 - 42)/2, 144, 50),
+                       GTextOverflowModeWordWrap,
+                       GTextAlignmentCenter,
+                       NULL);
   }
 }
 
@@ -105,7 +135,7 @@ void board_traverse(GPoint dir, BoardTraversalCallback callback) {
   }
   if (dir.y == 1) {
     ys = BOARD_SIZE - 1;
-    xd = -1;
+    yd = -1;
   }
   for (int x = xs; x >= 0 && x < BOARD_SIZE; x += xd) {
     for (int y = ys; y >= 0 && y < BOARD_SIZE; y += yd) {
@@ -201,6 +231,9 @@ bool board_moves_available() {
 }
 
 void board_move(Direction raw_dir) {
+  if (s_won_game || s_lost_game) {
+    return;
+  }
   s_move_vector = vector_from_direction(raw_dir);
   s_moved_this_turn = false;
   board_merged_reset();
