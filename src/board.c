@@ -15,6 +15,9 @@ static const int MAX_VAL = 11;
 static const int TILE_SIZE = 30;
 static const int BORDER_SIZE = 12;
 static int s_board_merged[BOARD_SIZE][BOARD_SIZE];
+static int s_total_score = 0;
+static bool s_won_game = false;
+static bool s_lost_game = false;
 
 static void tile_draw(GContext *ctx, int xs, int ys, int w, int h, int val) {
   if (val == 0) return;
@@ -58,6 +61,7 @@ void board_add_random_tile() {
     }
   }
 }
+
 void board_init() {
   grid_init();
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Almost done board init!");
@@ -66,7 +70,6 @@ void board_init() {
   board_add_random_tile();
   board_merged_reset();
 }
-
 
 bool board_merged_cell_already(GPoint cell) {
   assert(grid_cell_valid(cell));
@@ -163,6 +166,38 @@ void board_move_traversal_callback(GPoint cell) {
   grid_cell_set_value(cell, 0);
   grid_cell_set_value(positions.next, val + 1);
   s_moved_this_turn = true;
+  s_total_score += 1 << val;
+  if (val == MAX_VAL) {
+    s_won_game = true;
+  }
+}
+
+bool board_tile_matches_possible() {
+  for (int x = 0; x < BOARD_SIZE; x++) {
+    for (int y = 0; y < BOARD_SIZE; y++) {
+      Cell cell = Cell(x, y);
+      if (grid_cell_empty(cell)) {
+        continue;
+      }
+      int val = grid_cell_value(cell);
+      for (Direction d = 0; d < 4; d++) {
+        GPoint dir = vector_from_direction(d);
+        Cell other = Cell(x + dir.x, y + dir.y);
+        if (!grid_cell_valid(other)) {
+          continue;
+        }
+        int otherVal = grid_cell_value(other);
+        if (val == otherVal) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool board_moves_available() {
+  return grid_has_empty_cells() || board_tile_matches_possible();
 }
 
 void board_move(Direction raw_dir) {
@@ -172,5 +207,8 @@ void board_move(Direction raw_dir) {
   board_traverse(s_move_vector, board_move_traversal_callback);
   if (s_moved_this_turn) {
     board_add_random_tile();
+    if (!board_moves_available()) {
+      s_lost_game = true;
+    }
   }
 }
