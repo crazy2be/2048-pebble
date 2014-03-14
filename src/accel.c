@@ -1,3 +1,4 @@
+#include "accel.h"
 #include "2048-board.h"
 
 static const GPathInfo TRIANGLE_PATH_INFO = {

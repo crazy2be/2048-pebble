@@ -1,3 +1,5 @@
+#pragma once
+
 #include <pebble.h>
 
 #define assert(exp)\
