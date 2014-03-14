@@ -17,6 +17,7 @@ static int s_board[BOARD_SIZE][BOARD_SIZE];
 static int s_board_merged[BOARD_SIZE][BOARD_SIZE];
 
 static void tile_draw(GContext *ctx, int xs, int ys, int w, int h, int val) {
+  if (val == 0) return;
   graphics_draw_rect(ctx, (GRect) {
     .origin = GPoint(xs + TILE_SIZE/2 - val, ys + TILE_SIZE/2 - val),
     .size = GSize(val*2, val*2),
@@ -78,7 +79,8 @@ void board_add_random_tile() {
     int y = rand() % BOARD_SIZE;
     GPoint cell = GPoint(x, y);
     if (board_cell_empty(cell)) {
-      int val = rand() % MAX_VAL;
+      int r = rand() % 10;
+      int val = r == 0 ? 2 : 1;
       board_cell_set_value(cell, val);
       return;
     }
@@ -159,15 +161,19 @@ GPoint vector_from_direction(Direction raw_dir) {
   return GPoint(0, 0);
 }
 
+bool s_moved_this_turn = false;
+
 void board_move_tile(GPoint start, GPoint end) {
+  if (start.x == end.x && start.y == end.y) {
+    return;
+  }
   assert(board_cell_empty(end));
   int val = board_cell_value(start);
   board_cell_set_value(start, 0);
   board_cell_set_value(end, val);
+  s_moved_this_turn = true;
 }
 
-
-bool s_moved_this_turn = false;
 GPoint s_move_vector;
 
 void board_move_traversal_callback(GPoint cell) {
@@ -189,6 +195,7 @@ void board_move_traversal_callback(GPoint cell) {
 
   board_cell_set_value(cell, 0);
   board_cell_set_value(positions.next, val + 1);
+  s_moved_this_turn = true;
 }
 
 void board_move(Direction raw_dir) {
