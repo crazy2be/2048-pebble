@@ -1,14 +1,12 @@
 #include <pebble.h>
 
+#include "2048-board.h"
+
+extern void board_init();
+extern void board_draw(GContext* ctx);
+
 static Window *window;
 static Layer *game_layer;
-
-typedef enum {
-  DIRECTION_UP,
-  DIRECTION_RIGHT,
-  DIRECTION_DOWN,
-  DIRECTION_LEFT,
-} Direction;
 
 static const GPathInfo TRIANGLE_PATH_INFO = {
   .num_points = 3,
@@ -16,13 +14,18 @@ static const GPathInfo TRIANGLE_PATH_INFO = {
 };
 
 static GPath *s_triangle_path = NULL;
+static bool s_select_down = false;
 
-static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-//   text_layer_set_text(text_layer, "Select");
+static void select_down_handler(ClickRecognizerRef recognizer, void *context) {
+  s_select_down = true;
+}
+
+static void select_up_handler(ClickRecognizerRef recognizer, void *context) {
+  s_select_down = false;
 }
 
 static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_raw_click_subscribe(BUTTON_ID_SELECT, select_down_handler, select_up_handler, NULL);
 }
 
 static int16_t abs_int16(int16_t n) {
@@ -65,12 +68,19 @@ static void transform_path(GPath* path, Direction dir) {
 static void game_layer_update_callback(Layer *me, GContext *ctx) {
   AccelData accel = {0};
   accel_service_peek(&accel);
-//   graphics_context_set_fill_color(ctx, GColorWhite);
+
   graphics_draw_circle(ctx, GPoint(144/2, 144/2), 10);
   graphics_fill_circle(ctx, GPoint(accel.x/10 + 144/2, -accel.y/10 + 144/2), (accel.z + 4000)/200);
+
   Direction dir = read_accel_direction(accel);
   transform_path(s_triangle_path, dir);
-  gpath_draw_filled(ctx, s_triangle_path);
+  // Draw filled doesn't also draw the outline...
+  gpath_draw_outline(ctx, s_triangle_path);
+  if (s_select_down) {
+    gpath_draw_filled(ctx, s_triangle_path);
+  }
+
+  board_draw(ctx);
 }
 
 static void timer_callback(void *data) {
@@ -92,6 +102,8 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
+  board_init();
+
   s_triangle_path = gpath_create(&TRIANGLE_PATH_INFO);
   accel_data_service_subscribe(0, NULL);
   app_timer_register(100, timer_callback, NULL);
