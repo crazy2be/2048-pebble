@@ -27,11 +27,11 @@ void accel_init() {
 }
 
 static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
-//   board_undo(s_current_direction);
+  game_undo();
 }
 
 void accel_click_config_provider(void *context) {
-//   window_click_subscribe(BUTTON_ID_BACK, back_click_handler, NULL);
+  window_single_click_subscribe(BUTTON_ID_BACK, back_click_handler);
 }
 
 static int16_t abs_int16(int16_t n) {

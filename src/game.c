@@ -4,6 +4,7 @@
 
 // (empty), 2, 4, 8, 16,  32, 64, 128, 256,  512, 1024, 2048
 static const int MAX_VAL = 11;
+#define MAX_UNDO 10
 
 typedef struct {
   int score;
@@ -14,10 +15,23 @@ typedef struct {
 
 static GameState s_state;
 
+typedef struct {
+  GameState states[MAX_UNDO];
+  int cur;
+  int top;
+} UndoStack;
+static UndoStack s_undo_stack;
+
 void game_init() {
+  memset(&s_state, 0, sizeof(s_state));
+
   grid_init(&s_state.grid);
   board_set_grid(&s_state.grid);
   board_init();
+
+  s_undo_stack.states[0] = s_state;
+  s_undo_stack.cur = 0;
+  s_undo_stack.top = 0;
 }
 
 void game_draw(GContext* ctx) {
@@ -99,6 +113,11 @@ void game_move(Direction dir) {
     return;
   }
 
+//   APP_LOG(APP_LOG_LEVEL_DEBUG, "do: %d %d %d", s_undo_stack.cur, s_undo_stack.top, MAX_UNDO);
+  s_undo_stack.cur++;
+  s_undo_stack.top = s_undo_stack.cur;
+  s_undo_stack.states[s_undo_stack.cur % MAX_UNDO] = s_state;
+
   GameMoveState move_state;
   memset(&move_state, 0, sizeof(move_state));
   move_state.direction = dir;
@@ -116,7 +135,14 @@ void game_move(Direction dir) {
 }
 
 void game_undo() {
-  // TODO
+//   APP_LOG(APP_LOG_LEVEL_DEBUG, "undo: %d %d %d", s_undo_stack.cur, s_undo_stack.top, MAX_UNDO);
+  if (s_undo_stack.cur <= s_undo_stack.top - MAX_UNDO
+    || s_undo_stack.cur <= 0
+  ) {
+    return;
+  }
+  s_state = s_undo_stack.states[s_undo_stack.cur % MAX_UNDO];
+  s_undo_stack.cur--;
 }
 
 
