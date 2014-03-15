@@ -19,8 +19,10 @@ static int s_total_score = 0;
 static bool s_won_game = false;
 static bool s_lost_game = false;
 
-static void tile_draw(GContext *ctx, int xs, int ys, int val) {
+static void tile_draw(GContext *ctx, GPoint origin, int val) {
   if (val == 0) return;
+  int xs = origin.x;
+  int ys = origin.y;
   graphics_draw_rect(ctx, GRect(xs + 1, ys + 1, TILE_SIZE - 2, TILE_SIZE - 2));
   val++;
   if (val < 7) {
@@ -58,58 +60,78 @@ static void tile_draw(GContext *ctx, int xs, int ys, int val) {
   }
 }
 
+static GPoint tile_position(Cell cell) {
+  return GPoint(cell.x*TILE_SIZE + BORDER_SIZE, cell.y*TILE_SIZE + BORDER_SIZE + 20);
+}
+
 typedef struct {
   GPoint from;
   GPoint to;
   int val;
-  int start_time;
+  uint64_t start_time;
   int duration;
 } TileAnimation;
 
+#define MAX_ANIMATIONS (GRID_SIZE*GRID_SIZE)
 struct {
-  TileAnimation list[GRID_SIZE*GRID_SIZE];
+  TileAnimation list[MAX_ANIMATIONS];
   int start_index;
   int end_index;
   int max_animations;
-} s_animation_state = {
-  // Open-closed interval
-  .start_index = 0,
-  .end_index = 0,
-  .max_animations = GRID_SIZE*GRID_SIZE,
-};
+  bool cell_animating[GRID_SIZE][GRID_SIZE];
+} s_animation_state;
 
 uint64_t ms_time() {
-  return time_ms(NULL, NULL) + time(NULL)*1000;
+//   return time(NULL);
+  return ((uint64_t)time_ms(NULL, NULL)) + ((uint64_t)time(NULL))*1000;
+}
+
+void board_animations_init() {
+  memset(&s_animation_state, sizeof(s_animation_state), 0);
 }
 
 void board_add_animation(Cell from, Cell to, int val) {
-  int wrapped = s_animation_state.end_index % s_animation_state.max_animations;
+  int wrapped = s_animation_state.end_index % MAX_ANIMATIONS;
   s_animation_state.list[wrapped] = (TileAnimation) {
-    .from = GPoint(from.x*TILE_SIZE, from.y*TILE_SIZE),
-    .to = GPoint(to.x*TILE_SIZE, to.y*TILE_SIZE),
+    .from = from,
+    .to = to,
     .val = val,
     .start_time = ms_time(),
-    .duration = 1000,
+    .duration = 500,
   };
   s_animation_state.end_index++;
 }
 
-void board_draw_animations(GContext* ctx) {
-  int cur_time = ms_time();
-  int one = 1000; // Basically fixed-point
-  for (int i = s_animation_state.start_index; i < s_animation_state.end_index; i++) {
-    int wrapped = i % s_animation_state.max_animations;
-    TileAnimation a = s_animation_state.list[wrapped];
-    int alpha = (cur_time - a.start_time)*one/a.duration;
-    int x = (a.from.x*(one - alpha) + a.to.x*alpha)/one;
-    int y = (a.from.y*(one - alpha) + a.to.y*alpha)/one;
-    tile_draw(ctx, x, y, a.val);
-    if (a.start_time + a.duration >= cur_time) {
-      s_animation_state.start_index++;
-    }
-  }
+void board_add_move_animation(Cell from, Cell to, int val) {
+  board_add_animation(from, to, val);
+  s_animation_state.cell_animating[to.x][to.y] = true;
 }
 
+#define ALPHA_MAX 100000
+GPoint point_lerp(GPoint from, GPoint to, int alpha) {
+  int x = (from.x*(ALPHA_MAX - alpha) + to.x*(alpha))/ALPHA_MAX;
+  int y = (from.y*(ALPHA_MAX - alpha) + to.y*(alpha))/ALPHA_MAX;
+  return GPoint(x, y);
+}
+
+void board_draw_animations(GContext* ctx) {
+  uint64_t cur_time = ms_time();
+  for (int i = s_animation_state.start_index; i < s_animation_state.end_index; i++) {
+    int wrapped = i % MAX_ANIMATIONS;
+    TileAnimation a = s_animation_state.list[wrapped];
+
+    if (cur_time >= a.start_time + a.duration) {
+      s_animation_state.start_index++;
+      s_animation_state.cell_animating[a.to.x][a.to.y] = false;
+      continue;
+    }
+
+    int alpha = (cur_time - a.start_time)*ALPHA_MAX/a.duration;
+
+    GPoint point = point_lerp(tile_position(a.from), tile_position(a.to), alpha);
+    tile_draw(ctx, point, a.val);
+  }
+}
 
 void board_draw(GContext *ctx) {
   static char score_buf[100];
@@ -124,13 +146,17 @@ void board_draw(GContext *ctx) {
                      GTextAlignmentCenter,
                      NULL);
 
+  board_draw_animations(ctx);
+
   for (int i = 0; i < GRID_SIZE; i++) {
     for (int j = 0; j < GRID_SIZE; j++) {
-      int x = i*TILE_SIZE + BORDER_SIZE;
-      int y = j*TILE_SIZE + BORDER_SIZE + 20;
       Cell cell = Cell(i, j);
+      if (s_animation_state.cell_animating[cell.x][cell.y]) {
+        continue;
+      }
       int val = grid_cell_value(cell);
-      tile_draw(ctx, x, y, val);
+      GPoint pos = tile_position(cell);
+      tile_draw(ctx, pos, val);
     }
   }
 
@@ -185,6 +211,7 @@ void board_tile_sampler() {
 
 void board_init() {
   grid_init();
+  board_animations_init();
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Almost done board init!");
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Has empty %d", grid_has_empty_cells());
   board_add_random_tile();
@@ -253,7 +280,7 @@ GPoint vector_from_direction(Direction raw_dir) {
 
 bool s_moved_this_turn = false;
 
-void board_move_tile(GPoint start, GPoint end) {
+void board_move_tile(Cell start, Cell end) {
   if (start.x == end.x && start.y == end.y) {
     return;
   }
@@ -262,6 +289,7 @@ void board_move_tile(GPoint start, GPoint end) {
   grid_cell_set_value(start, 0);
   grid_cell_set_value(end, val);
   s_moved_this_turn = true;
+  board_add_move_animation(start, end, val);
 }
 
 GPoint s_move_vector;
@@ -285,6 +313,7 @@ void board_move_traversal_callback(GPoint cell) {
 
   grid_cell_set_value(cell, 0);
   grid_cell_set_value(positions.next, val + 1);
+  board_add_animation(cell, positions.next, val);
   s_moved_this_turn = true;
   s_total_score += 1 << val;
   if (val == MAX_VAL) {

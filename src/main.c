@@ -19,8 +19,8 @@ static void game_layer_update_callback(Layer *me, GContext *ctx) {
 }
 
 static void timer_callback(void *data) {
+  app_timer_register(16, timer_callback, NULL);
   layer_mark_dirty(game_layer);
-  app_timer_register(100, timer_callback, NULL);
 }
 
 static void window_load(Window *window) {
