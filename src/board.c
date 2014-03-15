@@ -275,8 +275,9 @@ GPoint vector_from_direction(Direction raw_dir) {
     return GPoint(0, 1);
   case DIRECTION_LEFT:
     return GPoint(-1, 0);
+  default:
+    assert(false);
   }
-  assert(false);
   return GPoint(0, 0);
 }
 

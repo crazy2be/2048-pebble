@@ -5,14 +5,25 @@ static const GPathInfo TRIANGLE_PATH_INFO = {
   .num_points = 3,
   .points = (GPoint []) {{-10, 10}, {0, 0}, {10, 10}},
 };
-
 static GPath *s_triangle_path = NULL;
+static GPath *s_triangle_strength[10] = {NULL};
 
 static bool s_select_down = false;
 static Direction s_current_direction;
 
 void accel_init() {
-  s_triangle_path = gpath_create(&TRIANGLE_PATH_INFO);  accel_data_service_subscribe(0, NULL);
+  s_triangle_path = gpath_create(&TRIANGLE_PATH_INFO);
+  static GPoint point_arrays[10][2];
+  GPathInfo triangle_strength_info;
+  for (int i = 0; i < 10; i++) {
+    int n = 10 - (i + 1);
+    triangle_strength_info.num_points = 2;
+    point_arrays[i][0] = GPoint(-n, n);
+    point_arrays[i][1] = GPoint(n, n);
+    triangle_strength_info.points = point_arrays[i];
+    s_triangle_strength[i] = gpath_create(&triangle_strength_info);
+  }
+  accel_data_service_subscribe(0, NULL);
 }
 
 static void select_down_handler(ClickRecognizerRef recognizer, void *context) {
@@ -42,8 +53,9 @@ static GPoint base_path_position(Direction dir) {
     return GPoint(144/2, 168 - 2);
   case DIRECTION_LEFT:
     return GPoint(1, 144/2 + (168-144));
+  default:
+    assert(false);
   }
-  assert(false);
   return GPoint(0, 0);
 }
 
@@ -58,6 +70,8 @@ static void transform_path(GPath* path, Direction dir, GPoint accel) {
   case DIRECTION_LEFT: case DIRECTION_RIGHT:
     gpath_move_to(path, GPoint(base.x, base.y + accel.y));
     break;
+  default:
+    assert(false);
   }
 }
 
@@ -75,23 +89,58 @@ static Direction read_accel_direction(AccelData accel) {
   }
 }
 
+static int read_accel_strength(AccelData accel) {
+  if (abs_int16(accel.x) > abs_int16(accel.y)) {
+    return abs_int16(accel.x);// * 100 / abs_int16(accel.y);
+  } else {
+    return abs_int16(accel.y);// * 100 / abs_int16(accel.x);
+  }
+}
+
+void draw_all_directions(GContext *ctx) {
+  for (Direction d = 0; d < 4; d++) {
+    transform_path(s_triangle_path, d, GPoint(0, 0));
+    gpath_draw_outline(ctx, s_triangle_path);
+  }
+}
+
+static Direction s_last_direction = DIRECTION_NONE;
 void accel_draw(GContext *ctx) {
   AccelData accel = {0};
   accel_service_peek(&accel);
 
-  graphics_draw_circle(ctx, GPoint(144/2, 144/2), 10);
-  graphics_fill_circle(ctx, GPoint(accel.x/10 + 144/2, -accel.y/10 + 144/2), (accel.z + 4000)/200);
+  graphics_draw_circle(ctx, GPoint(144/2, 144/2 + (168-144)), 10);
+  graphics_fill_circle(ctx, GPoint(accel.x/10 + 144/2, -accel.y/10 + 144/2 + (168-144)), (accel.z + 4000)/200);
+
+  if ((abs_int16(accel.x) < 50 && abs_int16(accel.y) < 50)) {
+    draw_all_directions(ctx);
+    s_last_direction = DIRECTION_NONE;
+    return;
+  }
 
   Direction dir = read_accel_direction(accel);
+  int strength = read_accel_strength(accel);
   s_current_direction = dir;
-  GPoint offset = GPoint(
-    accel.x*50 / abs_int16(accel.y),
-    -accel.y*50 / abs_int16(accel.x));
+//   GPoint offset = GPoint(
+//     accel.x*50 / abs_int16(accel.y),
+//     -accel.y*50 / abs_int16(accel.x));
   transform_path(s_triangle_path, dir, GPoint(0, 0));
-  // Draw filled doesn't also draw the outline...
   gpath_draw_outline(ctx, s_triangle_path);
-  if (s_select_down) {
-    gpath_draw_filled(ctx, s_triangle_path);
+  for (int i = 0; i < 10; i++) {
+    if (strength < (i+1)*50) continue;
+    transform_path(s_triangle_strength[i], dir, GPoint(0, 0));
+    gpath_draw_outline(ctx, s_triangle_strength[i]);
   }
+  if (strength / 50 >= 10 && dir != s_last_direction) {
+    board_move(dir);
+    s_last_direction = dir;
+  } else if (strength / 50 <= 7) {
+    s_last_direction = DIRECTION_NONE;
+  }
+
+//   APP_LOG(APP_LOG_LEVEL_DEBUG, "Strength %d", strength);
+//   if (s_select_down) {
+//     gpath_draw_filled(ctx, s_triangle_path);
+//   }
 }
 

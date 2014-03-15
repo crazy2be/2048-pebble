@@ -12,4 +12,5 @@ typedef enum {
   DIRECTION_RIGHT,
   DIRECTION_DOWN,
   DIRECTION_LEFT,
+  DIRECTION_NONE,
 } Direction;
