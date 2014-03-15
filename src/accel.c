@@ -35,13 +35,13 @@ static int16_t abs_int16(int16_t n) {
 static GPoint base_path_position(Direction dir) {
   switch (dir) {
   case DIRECTION_UP:
-    return GPoint(144/2, 0);
+    return GPoint(144/2, 25);
   case DIRECTION_RIGHT:
-    return GPoint(144, 144/2);
+    return GPoint(144 - 2, 144/2 + (168-144));
   case DIRECTION_DOWN:
-    return GPoint(144/2, 144);
+    return GPoint(144/2, 168 - 2);
   case DIRECTION_LEFT:
-    return GPoint(0, 144/2);
+    return GPoint(1, 144/2 + (168-144));
   }
   assert(false);
   return GPoint(0, 0);
@@ -87,7 +87,7 @@ void accel_draw(GContext *ctx) {
   GPoint offset = GPoint(
     accel.x*50 / abs_int16(accel.y),
     -accel.y*50 / abs_int16(accel.x));
-  transform_path(s_triangle_path, dir, offset);
+  transform_path(s_triangle_path, dir, GPoint(0, 0));
   // Draw filled doesn't also draw the outline...
   gpath_draw_outline(ctx, s_triangle_path);
   if (s_select_down) {

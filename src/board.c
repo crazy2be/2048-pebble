@@ -61,7 +61,9 @@ static void tile_draw(GContext *ctx, GPoint origin, int val) {
 }
 
 static GPoint tile_position(Cell cell) {
-  return GPoint(cell.x*TILE_SIZE + BORDER_SIZE, cell.y*TILE_SIZE + BORDER_SIZE + 20);
+  return GPoint(
+    cell.x*TILE_SIZE + BORDER_SIZE,
+    (168 - BORDER_SIZE) - (GRID_SIZE - cell.y)*TILE_SIZE);
 }
 
 typedef struct {
