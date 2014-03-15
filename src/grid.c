@@ -34,6 +34,24 @@ bool grid_has_empty_cells(Grid* g) {
   return false;
 }
 
+Cell grid_find_furthest_empty_cell(Grid* g, Cell start, Direction dir, Cell* next_out) {
+  GPoint delta = direction_to_vector(dir);
+
+  Cell prev = start;
+  Cell next = Cell(start.x + delta.x, start.y + delta.y);
+
+  // Progress towards the vector direction until an obstacle is found
+  while (grid_cell_valid(g, next) && grid_cell_empty(g, next)) {
+    prev = next;
+    next = Cell(prev.x + delta.x, prev.y + delta.y);
+  }
+
+  if (next_out) {
+    *next_out = next;
+  }
+  return prev;
+}
+
 void grid_init(Grid* g) {
   for (int x = 0; x < GRID_SIZE; x++) {
     for (int y = 0; y < GRID_SIZE; y++) {

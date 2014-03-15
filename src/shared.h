@@ -14,3 +14,5 @@ typedef enum {
   DIRECTION_LEFT,
   DIRECTION_NONE,
 } Direction;
+
+GPoint direction_to_vector(Direction dir);

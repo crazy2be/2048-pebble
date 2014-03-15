@@ -3,7 +3,7 @@
 
 #define GRID_SIZE 4
 
-typedef void (*BoardTraversalCallback)(GPoint cell);
+typedef void (*BoardTraversalCallback)(GPoint cell, void* context);
 
 typedef struct {
   GPoint furthest;
@@ -232,99 +232,6 @@ void board_merged_cell_set_merged(GPoint cell) {
   s_board_merged[cell.x][cell.y] = 1;
 }
 
-BoardFurthestPosition board_find_furthest_position(GPoint cell, GPoint dir) {
-  GPoint prev;
-
-  do {
-    prev = cell;
-    cell.x = prev.x + dir.x;
-    cell.y = prev.y + dir.y;
-  } while (grid_cell_valid(&s_grid, cell) && grid_cell_empty(&s_grid, cell));
-
-  return (BoardFurthestPosition) {
-    .furthest = prev,
-    .next = cell,
-  };
-}
-
-void board_traverse(GPoint dir, BoardTraversalCallback callback) {
-  int xs = 0, xd = 1;
-  int ys = 0, yd = 1;
-  if (dir.x == 1) {
-    xs = GRID_SIZE - 1;
-    xd = -1;
-  }
-  if (dir.y == 1) {
-    ys = GRID_SIZE - 1;
-    yd = -1;
-  }
-  for (int x = xs; x >= 0 && x < GRID_SIZE; x += xd) {
-    for (int y = ys; y >= 0 && y < GRID_SIZE; y += yd) {
-      GPoint cell = GPoint(x, y);
-      callback(cell);
-    }
-  }
-}
-
-GPoint vector_from_direction(Direction raw_dir) {
-  switch (raw_dir) {
-  case DIRECTION_UP:
-    return GPoint(0, -1);
-  case DIRECTION_RIGHT:
-    return GPoint(1, 0);
-  case DIRECTION_DOWN:
-    return GPoint(0, 1);
-  case DIRECTION_LEFT:
-    return GPoint(-1, 0);
-  default:
-    assert(false);
-  }
-  return GPoint(0, 0);
-}
-
-bool s_moved_this_turn = false;
-
-void board_move_tile(Cell start, Cell end) {
-  if (start.x == end.x && start.y == end.y) {
-    return;
-  }
-  assert(grid_cell_empty(&s_grid, end));
-  int val = grid_cell_value(&s_grid, start);
-  grid_cell_set_value(&s_grid, start, 0);
-  grid_cell_set_value(&s_grid, end, val);
-  s_moved_this_turn = true;
-  board_add_move_animation(start, end, val);
-}
-
-GPoint s_move_vector;
-
-void board_move_traversal_callback(GPoint cell) {
-  if (grid_cell_empty(&s_grid, cell)) return;
-
-  int val = grid_cell_value(&s_grid, cell);
-  BoardFurthestPosition positions = board_find_furthest_position(cell, s_move_vector);
-
-  if (!grid_cell_valid(&s_grid, positions.next)) {
-    board_move_tile(cell, positions.furthest);
-    return;
-  }
-
-  int nextVal = grid_cell_value(&s_grid, positions.next);
-  if (nextVal != val || board_merged_cell_already(positions.next)) {
-    board_move_tile(cell, positions.furthest);
-    return;
-  }
-
-  grid_cell_set_value(&s_grid, cell, 0);
-  grid_cell_set_value(&s_grid, positions.next, val + 1);
-  board_add_animation(cell, positions.next, val);
-  s_moved_this_turn = true;
-  s_total_score += 1 << val;
-  if (val == MAX_VAL) {
-    s_won_game = true;
-  }
-}
-
 bool board_tile_matches_possible() {
   for (int x = 0; x < GRID_SIZE; x++) {
     for (int y = 0; y < GRID_SIZE; y++) {
@@ -334,7 +241,7 @@ bool board_tile_matches_possible() {
       }
       int val = grid_cell_value(&s_grid, cell);
       for (Direction d = 0; d < 4; d++) {
-        GPoint dir = vector_from_direction(d);
+        GPoint dir = direction_to_vector(d);
         Cell other = Cell(x + dir.x, y + dir.y);
         if (!grid_cell_valid(&s_grid, other)) {
           continue;
@@ -353,15 +260,108 @@ bool board_moves_available() {
   return grid_has_empty_cells(&s_grid) || board_tile_matches_possible();
 }
 
-void board_move(Direction raw_dir) {
+void board_traverse(Direction dir, BoardTraversalCallback callback, void* context) {
+  Cell start;
+  GPoint delta;
+
+  // Always traverse from the farthest cell in the chosen direction
+  switch (dir) {
+  case DIRECTION_UP:
+    start = Cell(0, 0);
+    delta = GPoint(1, 1);
+    break;
+  case DIRECTION_RIGHT:
+    start = Cell(GRID_SIZE - 1, 0);
+    delta = GPoint(-1, 1);
+    break;
+  case DIRECTION_DOWN:
+    start = Cell(0, GRID_SIZE - 1);
+    delta = GPoint(1, -1);
+    break;
+  case DIRECTION_LEFT:
+    start = Cell(0, 0);
+    delta = GPoint(1, 1);
+    break;
+  default:
+    assert(false);
+    return;
+  }
+
+  for (int x = start.x; x >= 0 && x < GRID_SIZE; x += delta.x) {
+    for (int y = start.y; y >=  0 && y < GRID_SIZE; y += delta.y) {
+      callback(Cell(x, y), context);
+    }
+  }
+}
+
+bool s_moved_this_turn = false;
+
+bool board_move_tile(Cell start, Cell end) {
+  if (start.x == end.x && start.y == end.y) {
+    return false;
+  }
+  assert(grid_cell_empty(&s_grid, end));
+  int val = grid_cell_value(&s_grid, start);
+  grid_cell_set_value(&s_grid, start, 0);
+  grid_cell_set_value(&s_grid, end, val);
+  board_add_move_animation(start, end, val);
+  return true;
+}
+
+typedef struct {
+  bool moved;
+  Direction direction;
+} BoardMoveState;
+
+void board_move_traversal_callback(GPoint cell, void* context) {
+  BoardMoveState* move_state = (BoardMoveState*)context;
+
+  if (grid_cell_empty(&s_grid, cell)) return;
+
+  int val = grid_cell_value(&s_grid, cell);
+  Cell next;
+  Cell furthest = grid_find_furthest_empty_cell(&s_grid, cell, move_state->direction, &next);
+
+  if (!grid_cell_valid(&s_grid, next)) {
+    move_state->moved |= board_move_tile(cell, furthest);
+    return;
+  }
+
+  int nextVal = grid_cell_value(&s_grid, next);
+  if (nextVal != val || board_merged_cell_already(next)) {
+    move_state->moved |= board_move_tile(cell, furthest);
+    return;
+  }
+
+  grid_cell_set_value(&s_grid, cell, 0);
+  grid_cell_set_value(&s_grid, next, val + 1);
+
+  board_merged_cell_set_merged(next);
+  board_add_animation(cell, next, val);
+
+  move_state->moved = true;
+
+  s_total_score += 1 << val;
+  if (val == MAX_VAL) {
+    s_won_game = true;
+  }
+}
+
+void board_move(Direction dir) {
   if (s_won_game || s_lost_game) {
     return;
   }
-  s_move_vector = vector_from_direction(raw_dir);
-  s_moved_this_turn = false;
+
   board_merged_reset();
-  board_traverse(s_move_vector, board_move_traversal_callback);
-  if (s_moved_this_turn) {
+
+  BoardMoveState move_state = (BoardMoveState) {
+    .moved = false,
+    .direction = dir,
+  };
+
+  board_traverse(dir, board_move_traversal_callback, &move_state);
+
+  if (move_state.moved) {
     board_add_random_tile();
     if (!board_moves_available()) {
       s_lost_game = true;
