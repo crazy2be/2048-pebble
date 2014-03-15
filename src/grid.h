@@ -2,9 +2,6 @@
 
 #define GRID_SIZE 4
 
-typedef GPoint Cell;
-#define Cell(x, y) ((Cell){(x), (y)})
-
 typedef struct {
   int val;
   bool merged_already;

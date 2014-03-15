@@ -1,71 +1,15 @@
 #include "board.h"
 #include "grid.h"
-
-#define GRID_SIZE 4
+#include "tile.h"
 
 typedef void (*BoardTraversalCallback)(GPoint cell, void* context);
 
-typedef struct {
-  GPoint furthest;
-  GPoint next;
-} BoardFurthestPosition;
-
 // (empty), 2, 4, 8, 16,  32, 64, 128, 256,  512, 1024, 2048
 static const int MAX_VAL = 11;
-static const int TILE_SIZE = 30;
-static const int BORDER_SIZE = 12;
-static int s_board_merged[GRID_SIZE][GRID_SIZE];
 static int s_total_score = 0;
 static bool s_won_game = false;
 static bool s_lost_game = false;
 static Grid s_grid;
-
-static void tile_draw(GContext *ctx, GPoint origin, int val) {
-  if (val == 0) return;
-  int xs = origin.x;
-  int ys = origin.y;
-  graphics_draw_rect(ctx, GRect(xs + 1, ys + 1, TILE_SIZE - 2, TILE_SIZE - 2));
-  val++;
-  if (val < 7) {
-    for (int i = val; i > 0; i--) {
-      if ((val - i) % 2 == 1) continue;
-      graphics_draw_rect(ctx, (GRect) {
-        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
-        .size = GSize(i*2, i*2),
-      });
-    }
-  } else if (val < 9) {
-    for (int i = val; i > 0; i--) {
-      if (i % 3 == 0) continue;
-      graphics_draw_rect(ctx, (GRect) {
-        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
-        .size = GSize(i*2, i*2),
-      });
-    }
-  } else if (val < 11) {
-    for (int i = val; i > 0; i--) {
-      if (i % 4 == 0) continue;
-      graphics_draw_rect(ctx, (GRect) {
-        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
-        .size = GSize(i*2, i*2),
-      });
-    }
-  } else {
-    for (int i = val; i > 0; i--) {
-      if (i % 5 == 0) continue;
-      graphics_draw_rect(ctx, (GRect) {
-        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
-        .size = GSize(i*2, i*2),
-      });
-    }
-  }
-}
-
-static GPoint tile_position(Cell cell) {
-  return GPoint(
-    cell.x*TILE_SIZE + BORDER_SIZE,
-    (168 - BORDER_SIZE) - (GRID_SIZE - cell.y)*TILE_SIZE);
-}
 
 typedef struct {
   GPoint from;
@@ -85,12 +29,11 @@ struct {
 } s_animation_state;
 
 uint64_t ms_time() {
-//   return time(NULL);
   return ((uint64_t)time_ms(NULL, NULL)) + ((uint64_t)time(NULL))*1000;
 }
 
 void board_animations_init() {
-  memset(&s_animation_state, sizeof(s_animation_state), 0);
+  memset(&s_animation_state, 0, sizeof(s_animation_state));
 }
 
 void board_add_animation(Cell from, Cell to, int val) {
@@ -181,14 +124,6 @@ void board_draw(GContext *ctx) {
   }
 }
 
-void board_merged_reset() {
-  for (int i = 0; i < GRID_SIZE; i++) {
-    for (int j = 0; j < GRID_SIZE; j++) {
-      s_board_merged[i][j] = 0;
-    }
-  }
-}
-
 void board_add_random_tile() {
   assert(grid_has_empty_cells(&s_grid));
   while (true) {
@@ -219,17 +154,6 @@ void board_init() {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Has empty %d", grid_has_empty_cells(&s_grid));
   board_add_random_tile();
   board_add_random_tile();
-  board_merged_reset();
-}
-
-bool board_merged_cell_already(GPoint cell) {
-  assert(grid_cell_valid(&s_grid, cell));
-  return s_board_merged[cell.x][cell.y];
-}
-
-void board_merged_cell_set_merged(GPoint cell) {
-  assert(grid_cell_valid(&s_grid, cell));
-  s_board_merged[cell.x][cell.y] = 1;
 }
 
 bool board_tile_matches_possible() {
@@ -258,6 +182,20 @@ bool board_tile_matches_possible() {
 
 bool board_moves_available() {
   return grid_has_empty_cells(&s_grid) || board_tile_matches_possible();
+}
+
+bool board_move_tile(Cell start, Cell end) {
+  if (start.x == end.x && start.y == end.y) {
+    return false;
+  }
+  if (!grid_cell_empty(&s_grid, end)) {
+    return false;
+  }
+  int val = grid_cell_value(&s_grid, start);
+  grid_cell_set_value(&s_grid, start, 0);
+  grid_cell_set_value(&s_grid, end, val);
+  board_add_move_animation(start, end, val);
+  return true;
 }
 
 void board_traverse(Direction dir, BoardTraversalCallback callback, void* context) {
@@ -294,23 +232,11 @@ void board_traverse(Direction dir, BoardTraversalCallback callback, void* contex
   }
 }
 
-bool s_moved_this_turn = false;
-
-bool board_move_tile(Cell start, Cell end) {
-  if (start.x == end.x && start.y == end.y) {
-    return false;
-  }
-  assert(grid_cell_empty(&s_grid, end));
-  int val = grid_cell_value(&s_grid, start);
-  grid_cell_set_value(&s_grid, start, 0);
-  grid_cell_set_value(&s_grid, end, val);
-  board_add_move_animation(start, end, val);
-  return true;
-}
-
 typedef struct {
   bool moved;
   Direction direction;
+  // No recursive merges allowed
+  bool merged_tile[GRID_SIZE][GRID_SIZE];
 } BoardMoveState;
 
 void board_move_traversal_callback(GPoint cell, void* context) {
@@ -328,7 +254,7 @@ void board_move_traversal_callback(GPoint cell, void* context) {
   }
 
   int nextVal = grid_cell_value(&s_grid, next);
-  if (nextVal != val || board_merged_cell_already(next)) {
+  if (nextVal != val || move_state->merged_tile[next.x][next.y]) {
     move_state->moved |= board_move_tile(cell, furthest);
     return;
   }
@@ -336,7 +262,7 @@ void board_move_traversal_callback(GPoint cell, void* context) {
   grid_cell_set_value(&s_grid, cell, 0);
   grid_cell_set_value(&s_grid, next, val + 1);
 
-  board_merged_cell_set_merged(next);
+  move_state->merged_tile[next.x][next.y] = true;
   board_add_animation(cell, next, val);
 
   move_state->moved = true;
@@ -352,12 +278,9 @@ void board_move(Direction dir) {
     return;
   }
 
-  board_merged_reset();
-
-  BoardMoveState move_state = (BoardMoveState) {
-    .moved = false,
-    .direction = dir,
-  };
+  BoardMoveState move_state;
+  memset(&move_state, 0, sizeof(move_state));
+  move_state.direction = dir;
 
   board_traverse(dir, board_move_traversal_callback, &move_state);
 
