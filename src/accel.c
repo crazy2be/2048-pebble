@@ -1,5 +1,5 @@
 #include "accel.h"
-#include "board.h"
+#include "game.h"
 
 static const GPathInfo TRIANGLE_PATH_INFO = {
   .num_points = 3,
@@ -125,7 +125,7 @@ void accel_draw(GContext *ctx) {
   }
 
   if (strength / 50 >= 10 && dir != s_last_direction) {
-    board_move(dir);
+    game_move(dir);
     s_last_direction = dir;
   } else if (strength / 50 <= 7) {
     s_last_direction = DIRECTION_NONE;

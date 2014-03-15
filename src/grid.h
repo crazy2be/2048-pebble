@@ -1,3 +1,5 @@
+#pragma once
+
 #include "shared.h"
 
 #define GRID_SIZE 4

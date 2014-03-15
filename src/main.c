@@ -1,4 +1,4 @@
-#include "board.h"
+#include "game.h"
 #include "accel.h"
 #include "button.h"
 
@@ -15,7 +15,7 @@ static void game_layer_update_callback(Layer *me, GContext *ctx) {
   accel_draw(ctx);
 //   button_draw(ctx);
 
-  board_draw(ctx);
+  game_draw(ctx);
 }
 
 static void timer_callback(void *data) {
@@ -37,7 +37,7 @@ static void window_unload(Window *window) {
 }
 
 static void init(void) {
-  board_init();
+  game_init();
 
   accel_init();
 //   button_init();

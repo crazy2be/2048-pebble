@@ -1,20 +1,20 @@
 #include "button.h"
-#include "board.h"
+#include "game.h"
 
 static void button_pressed_handler(ClickRecognizerRef recognizer, void *context) {
   ButtonId button = click_recognizer_get_button_id(recognizer);
   switch (button) {
   case BUTTON_ID_BACK:
-    board_move(DIRECTION_LEFT);
+    game_move(DIRECTION_LEFT);
     break;
   case BUTTON_ID_UP:
-    board_move(DIRECTION_UP);
+    game_move(DIRECTION_UP);
     break;
   case BUTTON_ID_DOWN:
-    board_move(DIRECTION_DOWN);
+    game_move(DIRECTION_DOWN);
     break;
   case BUTTON_ID_SELECT:
-    board_move(DIRECTION_RIGHT);
+    game_move(DIRECTION_RIGHT);
     break;
   default:
     assert(false);
