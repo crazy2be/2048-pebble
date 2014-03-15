@@ -10,7 +10,7 @@ typedef struct {
   GPoint next;
 } BoardFurthestPosition;
 
-// (empty), 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+// (empty), 2, 4, 8, 16,  32, 64, 128, 256,  512, 1024, 2048
 static const int MAX_VAL = 11;
 static const int TILE_SIZE = 30;
 static const int BORDER_SIZE = 12;
@@ -21,11 +21,41 @@ static bool s_lost_game = false;
 
 static void tile_draw(GContext *ctx, int xs, int ys, int w, int h, int val) {
   if (val == 0) return;
-
-  graphics_draw_rect(ctx, (GRect) {
-    .origin = GPoint(xs + TILE_SIZE/2 - val, ys + TILE_SIZE/2 - val),
-    .size = GSize(val*2, val*2),
-  });
+  graphics_draw_rect(ctx, GRect(xs + 1, ys + 1, w - 2, h - 2));
+  val++;
+  if (val < 7) {
+    for (int i = val; i > 0; i--) {
+      if ((val - i) % 2 == 1) continue;
+      graphics_draw_rect(ctx, (GRect) {
+        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
+        .size = GSize(i*2, i*2),
+      });
+    }
+  } else if (val < 9) {
+    for (int i = val; i > 0; i--) {
+      if (i % 3 == 0) continue;
+      graphics_draw_rect(ctx, (GRect) {
+        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
+        .size = GSize(i*2, i*2),
+      });
+    }
+  } else if (val < 11) {
+    for (int i = val; i > 0; i--) {
+      if (i % 4 == 0) continue;
+      graphics_draw_rect(ctx, (GRect) {
+        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
+        .size = GSize(i*2, i*2),
+      });
+    }
+  } else {
+    for (int i = val; i > 0; i--) {
+      if (i % 5 == 0) continue;
+      graphics_draw_rect(ctx, (GRect) {
+        .origin = GPoint(xs + TILE_SIZE/2 - i, ys + TILE_SIZE/2 - i),
+        .size = GSize(i*2, i*2),
+      });
+    }
+  }
 }
 
 void board_draw(GContext *ctx) {
@@ -89,6 +119,14 @@ void board_add_random_tile() {
       grid_cell_set_value(cell, val);
       return;
     }
+  }
+}
+
+void board_tile_sampler() {
+  for (int i = 0; i < BOARD_SIZE*BOARD_SIZE; i++) {
+    int x = i % BOARD_SIZE;
+    int y = i / BOARD_SIZE;
+    grid_cell_set_value(Cell(x, y), i > MAX_VAL ? 0 : i);
   }
 }
 
