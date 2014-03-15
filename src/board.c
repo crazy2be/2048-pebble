@@ -188,7 +188,7 @@ void board_move_traversal_callback(GPoint cell) {
   }
 
   int nextVal = grid_cell_value(positions.next);
-  if (nextVal != val || board_merged_cell_already(cell)) {
+  if (nextVal != val || board_merged_cell_already(positions.next)) {
     board_move_tile(cell, positions.furthest);
     return;
   }
