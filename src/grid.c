@@ -1,7 +1,5 @@
 #include "grid.h"
 
-#define GRID_SIZE 4
-
 static int s_grid[GRID_SIZE][GRID_SIZE];
 
 bool grid_cell_valid(Cell cell) {

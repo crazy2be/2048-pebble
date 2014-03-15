@@ -1,5 +1,7 @@
 #include "shared.h"
 
+#define GRID_SIZE 4
+
 typedef GPoint Cell;
 #define Cell(x, y) ((Cell){(x), (y)})
 
