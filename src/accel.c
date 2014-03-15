@@ -26,17 +26,12 @@ void accel_init() {
   accel_data_service_subscribe(0, NULL);
 }
 
-static void select_down_handler(ClickRecognizerRef recognizer, void *context) {
-  s_select_down = true;
-}
-
-static void select_up_handler(ClickRecognizerRef recognizer, void *context) {
-  s_select_down = false;
-  board_move(s_current_direction);
+static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
+//   board_undo(s_current_direction);
 }
 
 void accel_click_config_provider(void *context) {
-  window_raw_click_subscribe(BUTTON_ID_SELECT, select_down_handler, select_up_handler, NULL);
+//   window_click_subscribe(BUTTON_ID_BACK, back_click_handler, NULL);
 }
 
 static int16_t abs_int16(int16_t n) {
@@ -91,9 +86,9 @@ static Direction read_accel_direction(AccelData accel) {
 
 static int read_accel_strength(AccelData accel) {
   if (abs_int16(accel.x) > abs_int16(accel.y)) {
-    return abs_int16(accel.x);// * 100 / abs_int16(accel.y);
+    return abs_int16(accel.x);
   } else {
-    return abs_int16(accel.y);// * 100 / abs_int16(accel.x);
+    return abs_int16(accel.y);
   }
 }
 
@@ -120,10 +115,7 @@ void accel_draw(GContext *ctx) {
 
   Direction dir = read_accel_direction(accel);
   int strength = read_accel_strength(accel);
-  s_current_direction = dir;
-//   GPoint offset = GPoint(
-//     accel.x*50 / abs_int16(accel.y),
-//     -accel.y*50 / abs_int16(accel.x));
+
   transform_path(s_triangle_path, dir, GPoint(0, 0));
   gpath_draw_outline(ctx, s_triangle_path);
   for (int i = 0; i < 10; i++) {
@@ -131,16 +123,12 @@ void accel_draw(GContext *ctx) {
     transform_path(s_triangle_strength[i], dir, GPoint(0, 0));
     gpath_draw_outline(ctx, s_triangle_strength[i]);
   }
+
   if (strength / 50 >= 10 && dir != s_last_direction) {
     board_move(dir);
     s_last_direction = dir;
   } else if (strength / 50 <= 7) {
     s_last_direction = DIRECTION_NONE;
   }
-
-//   APP_LOG(APP_LOG_LEVEL_DEBUG, "Strength %d", strength);
-//   if (s_select_down) {
-//     gpath_draw_filled(ctx, s_triangle_path);
-//   }
 }
 
