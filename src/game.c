@@ -22,6 +22,15 @@ typedef struct {
 } UndoStack;
 static UndoStack s_undo_stack;
 
+
+static void tile_sampler() {
+  for (int i = 0; i < GRID_SIZE*GRID_SIZE; i++) {
+    int x = i % GRID_SIZE;
+    int y = i / GRID_SIZE;
+    grid_cell_set_value(&s_state.grid, Cell(x, y), i > MAX_VAL ? 0 : i);
+  }
+}
+
 void game_init() {
   memset(&s_state, 0, sizeof(s_state));
 
@@ -145,11 +154,3 @@ void game_undo() {
   s_undo_stack.cur--;
 }
 
-
-static void tile_sampler() {
-  for (int i = 0; i < GRID_SIZE*GRID_SIZE; i++) {
-    int x = i % GRID_SIZE;
-    int y = i / GRID_SIZE;
-    grid_cell_set_value(&s_state.grid, Cell(x, y), i > MAX_VAL ? 0 : i);
-  }
-}

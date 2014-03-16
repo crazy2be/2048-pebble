@@ -90,9 +90,9 @@ static Direction read_accel_direction(AccelData accel) {
 
 static int read_accel_strength(AccelData accel) {
   if (abs_int16(accel.x) > abs_int16(accel.y)) {
-    return abs_int16(accel.x)/10;
+    return abs_int16(accel.x)/20;
   } else {
-    return abs_int16(accel.y)/15;
+    return abs_int16(accel.y)/30;
   }
 }
 
