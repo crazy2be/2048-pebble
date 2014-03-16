@@ -4,7 +4,7 @@
 
 // (empty), 2, 4, 8, 16,  32, 64, 128, 256,  512, 1024, 2048
 static const int MAX_VAL = 11;
-#define MAX_UNDO 100
+#define MAX_UNDO 10
 
 typedef struct {
   int score;
