@@ -16,6 +16,4 @@ Press the middle button to pause/unpause.
 
 Press the back button to undo your last move. Hold to exit.
 
-[PBW](http://www.speedyshare.com/BX29x/download/2048-pebble.pbw)
-
-Also downloadable from the Pebble app store (search 2048).
+[**Download PBW**](http://www.speedyshare.com/BX29x/download/2048-pebble.pbw) (also in the Pebble app store)
