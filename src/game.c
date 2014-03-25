@@ -30,12 +30,25 @@ static void tile_sampler() {
   }
 }
 
+static void fake_win() {
+  for (int i = 0; i < GRID_SIZE*GRID_SIZE; i++) {
+    int x = i % GRID_SIZE;
+    int y = i / GRID_SIZE;
+    int val = rand() % WINNING_VAL;
+    grid_cell_set_value(&s_state.grid, Cell(x, y), val);
+  }
+  s_state.score = 16034;
+}
+
 void game_init() {
   memset(&s_state, 0, sizeof(s_state));
 
   grid_init(&s_state.grid);
   board_set_grid(&s_state.grid);
   board_init();
+
+//   srand(time(NULL));
+//   fake_win();
 
   s_undo_stack.states[0] = s_state;
   s_undo_stack.cur = 0;
