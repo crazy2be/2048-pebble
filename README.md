@@ -3,9 +3,9 @@
 
 Clone of [2048](https://github.com/gabrielecirulli/2048) for the Pebble smartwatch
 
-![pebble-screenshot_2014-03-15_21-50-30](https://f.cloud.github.com/assets/667720/2429976/7d691394-acad-11e3-8cb4-3e72c517db17.png)
-![pebble-screenshot_2014-03-15_21-50-05](https://f.cloud.github.com/assets/667720/2429977/87a7639c-acad-11e3-972c-7223b02f77d9.png)
-![pebble-screenshot_2014-03-16_11-30-14](https://f.cloud.github.com/assets/667720/2431611/c657388e-ad38-11e3-8796-f154213c2300.png)
+![pebble-screenshot_2014-03-25_14-10-28](https://f.cloud.github.com/assets/667720/2515968/ded41488-b448-11e3-9fff-08cd10e7733e.png)
+![pebble-screenshot_2014-03-25_14-10-46](https://f.cloud.github.com/assets/667720/2515971/e2befeb4-b448-11e3-8c20-e019600237dc.png)
+
 
 
 Here, you can see me about to win (I cheated :).
