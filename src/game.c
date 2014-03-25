@@ -103,8 +103,10 @@ void game_move_traversal_callback(GPoint cell, void* context) {
     return;
   }
 
+  // Merge tiles
+  val++;
   grid_cell_set_value(&s_state.grid, cell, 0);
-  grid_cell_set_value(&s_state.grid, next, val + 1);
+  grid_cell_set_value(&s_state.grid, next, val);
 
   move_state->merged_tile[next.x][next.y] = true;
   board_add_animation(cell, next, val);
