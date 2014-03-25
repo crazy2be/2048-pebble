@@ -8,7 +8,7 @@ Clone of [2048](https://github.com/gabrielecirulli/2048) for the Pebble smartwat
 ![pebble-screenshot_2014-03-16_11-30-14](https://f.cloud.github.com/assets/667720/2431611/c657388e-ad38-11e3-8796-f154213c2300.png)
 
 
-Here, you can seem me about to win (I cheated :).
+Here, you can see me about to win (I cheated :).
 
 Tilt the screen to combine adjacent matching tiles. You win when you reach the 2048 tile!
 
