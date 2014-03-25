@@ -3,7 +3,7 @@
 #include "tile.h"
 
 // (empty), 2, 4, 8, 16,  32, 64, 128, 256,  512, 1024, 2048
-static const int MAX_VAL = 11;
+static const int WINNING_VAL = 11;
 #define MAX_UNDO 10
 
 typedef struct {
@@ -22,12 +22,11 @@ typedef struct {
 } UndoStack;
 static UndoStack s_undo_stack;
 
-
 static void tile_sampler() {
   for (int i = 0; i < GRID_SIZE*GRID_SIZE; i++) {
     int x = i % GRID_SIZE;
     int y = i / GRID_SIZE;
-    grid_cell_set_value(&s_state.grid, Cell(x, y), i > MAX_VAL ? 0 : i);
+    grid_cell_set_value(&s_state.grid, Cell(x, y), i < WINNING_VAL ? i : 0);
   }
 }
 
@@ -114,7 +113,7 @@ void game_move_traversal_callback(GPoint cell, void* context) {
   move_state->moved = true;
 
   s_state.score += 1 << val;
-  if (val == MAX_VAL) {
+  if (val == WINNING_VAL) {
     s_state.won = true;
   }
 }
