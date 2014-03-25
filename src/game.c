@@ -103,17 +103,19 @@ void game_move_traversal_callback(GPoint cell, void* context) {
   }
 
   // Merge tiles
-  val++;
+  int merged_val = val + 1;
   grid_cell_set_value(&s_state.grid, cell, 0);
-  grid_cell_set_value(&s_state.grid, next, val);
+  grid_cell_set_value(&s_state.grid, next, merged_val);
 
+  // Animation for the original tile.
   move_state->merged_tile[next.x][next.y] = true;
   board_add_animation(cell, next, val);
 
   move_state->moved = true;
 
-  s_state.score += 1 << val;
-  if (val == WINNING_VAL) {
+  // TODO: Add continue ability
+  s_state.score += 1 << merged_val;
+  if (merged_val == WINNING_VAL) {
     s_state.won = true;
   }
 }
