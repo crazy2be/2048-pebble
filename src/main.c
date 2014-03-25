@@ -12,10 +12,10 @@ static void click_config_provider(void *context) {
 }
 
 static void game_layer_update_callback(Layer *me, GContext *ctx) {
-  accel_draw(ctx);
-//   button_draw(ctx);
-
   game_draw(ctx);
+
+//   button_draw(ctx);
+  accel_draw(ctx);
 }
 
 static void timer_callback(void *data) {

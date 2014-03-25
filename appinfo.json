@@ -12,6 +12,10 @@
     "dummy": 0
   },
   "resources": {
-    "media": []
+    "media": [{
+      "type": "png",
+      "name": "TILES_BITMAP",
+      "file": "tiles.png"
+    }]
   }
 }
