@@ -8,6 +8,7 @@ static const int WINNING_VAL = 11;
 
 typedef struct {
   int score;
+  int clock;
   bool won;
   bool lost;
   Grid grid;
@@ -42,6 +43,9 @@ static void fake_win() {
 
 void game_init() {
   memset(&s_state, 0, sizeof(s_state));
+
+  s_state.clock = time(NULL);
+  srand(s_state.clock);
 
   grid_init(&s_state.grid);
   board_set_grid(&s_state.grid);
@@ -152,6 +156,14 @@ void game_move(Direction dir) {
   board_set_grid(&s_state.grid);
 
   if (move_state.moved) {
+    // Ensure the state of the random number generator is consistent.
+    // This avoids a player being able to circumvent an inconvenient
+    // random tile choice by undoing and then redoing the same move
+    // (otherwise, the new move would potentially chose a different
+    // random tile to fill).
+    s_state.clock++;
+    srand(s_state.clock);
+
     board_add_random_tile();
     if (!board_moves_available()) {
       s_state.lost = true;
